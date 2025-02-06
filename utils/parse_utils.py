@@ -287,31 +287,37 @@ class StructuredSAS:
 
         def get_edges():
             """
-            Gets nodes
-            :return:
+            Gets edges
+            :return: list of edges where (A, B) is considered different from (B, A),
+            excluding edges where A == B.
             """
+
             def get_sub_edges(input_list, output_list):
                 """
-                Return a list of unique pairs (tuples) composed of an element from input_list
-                and an element from output_list. Pairs (A, B) and (B, A) are considered identical.
+                Return a list of unique directed pairs (inp, out) from input_list to output_list,
+                excluding pairs where inp == out.
                 """
-                # dict.fromkeys(...) preserves insertion order, effectively removing duplicates
-                # but keeping the first occurrence. tuple(sorted(...)) handles (A, B) == (B, A).
+                # Using dict.fromkeys(...) preserves insertion order and removes duplicates
+                # but keeps the first occurrence.
                 sub_edges = list(
                     dict.fromkeys(
-                        tuple(sorted((inp, out)))  # sort each pair to ensure uniqueness
+                        (inp, out)
                         for inp in input_list
                         for out in output_list
+                        if inp != out
                     )
                 )
                 return sub_edges
 
-            edges = [get_sub_edges(run['inputs'], run['outputs']) for run in self.struct_code]
-            edges = [item for sublist in edges for item in sublist]
+            edges = []
+            for run in self.struct_code:
+                edges.extend(get_sub_edges(run['inputs'], run['outputs']))
+
             return edges
 
         self.nodes = get_nodes()
         self.edges = get_edges()
+
         return self
 
 
