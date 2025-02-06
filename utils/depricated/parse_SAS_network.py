@@ -182,7 +182,7 @@ def assign_subgraph_ids(parsed_data):
 def save_results(results):
     # Save parsed results as JSON
 
-    output_json_path = "data/parsed_sas_results.json"
+    output_json_path = "../../data/parsed_sas_results.json"
 
     with open(output_json_path, "w", encoding="utf-8") as json_file:
         json.dump(results, json_file, indent=4)
@@ -193,7 +193,7 @@ def save_results(results):
 if __name__=='__main__':
 
     # Example usage
-    sas_file_path = "data/example.sas"  # Replace with your actual SAS file
+    sas_file_path = "../../data/example.sas"  # Replace with your actual SAS file
     with open(sas_file_path, 'r', encoding='utf-8') as file:
         sas_script = file.read()
 

@@ -56,7 +56,7 @@ def generate_mermaid_markdown(data):
 # Read input data from a JSON file
 
 if __name__=='__main__':
-    with open(r'C:\Users\lvasionis\PycharmProjects\devs\SAS DAG\data\parsed_sas_results.json', 'r') as file:
+    with open(r'data\parsed_sas_results.json', 'r') as file:
         data = json.load(file)
     # Generate Mermaid markup
     mermaid_markup = generate_mermaid_markdown(data)
