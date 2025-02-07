@@ -226,7 +226,24 @@ class StructuredSAS:
         self.struct_code=cleaned_results
         return self
 
+    def clean_input_output_names(self):
+        def keep_tbl_name_only(run_structured):
+            """
+            For inputs and outputs that hold database mame separated with dot (e.g my_db.table1), the code removes database
+            name, and keeps only table name. This is to improve network graphs where inputs/outputs like my_db.table1 are not
+            considered the same as 'table1'. Thus my_db.table1 and similar nodes(variables) usually create sub-graphs
+            in the network - they reduce accuracy of the graph
 
+            :param run_structured:
+            :return: dict of structured run code
+            """
+            run_structured['inputs'] = [val.split('.', 1)[1] if '.' in val else val for val in run_structured['inputs']]
+            run_structured['outputs'] = [val.split('.', 1)[1] if '.' in val else val for val in run_structured['outputs']]
+
+            return run_structured
+
+        self.struct_code = [keep_tbl_name_only(run) for run in self.struct_code]
+        return self
 
     def get_metadata(self):
         def get_selected_metadata(selected_metadata:list, metadata_type)-> list:
@@ -304,12 +321,15 @@ class StructuredSAS:
         return self
 
     def execute_all_processing_steps(self):
-        return self.clean_initial_code()\
-            .parse_sas_script().merge_identity_runs()\
-            .assign_subgraph_ids()\
-            .clean_run_code()\
-            .get_metadata()\
-            .get_metadata_network()
+        return (
+            self.clean_initial_code()\
+                .parse_sas_script()\
+                .merge_identity_runs()\
+                .assign_subgraph_ids()\
+                .clean_run_code()\
+                .clean_input_output_names()\
+                .get_metadata()\
+                .get_metadata_network())
 
     def save_results(self):
         # Save parsed results as JSON
@@ -336,11 +356,11 @@ if __name__ == '__main__':
     struct_SAS = struct_SAS.parse_sas_script()
     struct_SAS = struct_SAS.merge_identity_runs()
     struct_SAS = struct_SAS.assign_subgraph_ids()
+    struct_SAS = struct_SAS.clean_run_code()
     struct_SAS = struct_SAS.get_metadata()
     struct_SAS = struct_SAS.get_metadata_network()
     struct_SAS.save_results()
 
-    print("#############")
 
 
 

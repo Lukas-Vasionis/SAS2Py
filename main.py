@@ -1,8 +1,7 @@
 import streamlit as st
 from utils.parse_utils import StructuredSAS
-from utils.mermaid_utils import generate_mermaid_markdown
-import pyperclip
-from utils.network_utils import create_net_html_ins_outs
+from utils.network_utils import create_net_html_ins_outs,create_graphviz_graph_ins_outs
+from utils.devs import *
 
 ############################################################
 # 1. Set page configuration
@@ -63,41 +62,6 @@ if uploaded_file is not None:
 if st.session_state['sas_script']:
     st.session_state['struct_SAS'] = StructuredSAS(st.session_state['sas_script']).execute_all_processing_steps()
 
-############################################################
-# 5. Flow Chart Generation
-############################################################
-# col_flow_chart, col_copy = st.columns([1,0.2])
-
-with st.container(border=True):
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown(
-            """
-            ### Mermaid mardown
-            **[Proof of concept | Experimental]**
-            
-            This is one of the solutions to visualise SAS code in network manner. 
-            It attempts to visualise SAS code as inputs -> precessing code -> outputs
-            Since python doesnt have a convenient way to visualise this, I use Mermaid markdown and its visuasation tool. 
-            
-            So click "Copy Flow Chart and paste it into Mermaid tool  at: https://www.mermaidchart.com/play#
-            
-            """
-        )
-    with col2:
-        if st.button("Get Flow Chart"):
-            # Generate flow chart only if we have a struct_SAS
-            if st.session_state['struct_SAS']:
-                flow_chart = generate_mermaid_markdown(st.session_state['struct_SAS'].struct_code)
-                st.session_state['flow_chart'] = flow_chart
-                # st.session_state['show_flow_chart'] = True
-
-        # If flow chart is generated, show copy button
-        # with col_copy:
-        if st.session_state['flow_chart']:
-            if st.button('Copy to clipboard'):
-                pyperclip.copy(st.session_state['flow_chart'])
-                st.success('Text copied successfully!\nPaste it here: https://www.mermaidchart.com/play#')
 
 
 ############################################################
@@ -118,17 +82,36 @@ with st.container(border=True):
 
         # Widgets
         graph_net_ins_outs_height = st.slider("Select height for network graph", min_value=100, max_value=800, step=10, value=750)
-        physics_button = st.toggle("Toggle Physics in the network graph")
+        # physics_button = st.toggle("Toggle Physics in the network graph")
+        # selected_layout = st.radio('Try different layouts',options=['barnes_hut',"repulsion","force_atlas_2based","hierarchical_repulsion"])
 
-        # Data processing and visualization
-        html_data = create_net_html_ins_outs(
-            nodes=st.session_state['struct_SAS'].nodes,
-            edges=st.session_state['struct_SAS'].edges,
-            physics=physics_button,
-            height=graph_net_ins_outs_height)
+
+        nodes = st.session_state['struct_SAS'].nodes
+        edges = st.session_state['struct_SAS'].edges
+
+
+        layout_choice = st.selectbox(
+            "Choose a layout:",
+            ["Force-directed (spring_layout)", "BFS hierarchical", "Multipartite"]
+        )
+        if layout_choice == "Force-directed (spring_layout)":
+            net = create_pyvis_force_layout(nodes, edges)
+        elif layout_choice == "BFS hierarchical":
+            net = create_pyvis_hierarchical_layout(nodes, edges)
+        else:  # "Multipartite"
+            # For multipartite layout, define which layer each node belongs to
+            layer_map = {
+                "A": 0,
+                "B": 1,
+                "C": 1,
+                "D": 2,
+                "E": 2,
+                "F": 3
+            }
+            net = create_pyvis_multipartite_layout(nodes, edges, layer_map)
+        html_data = net.generate_html()
 
         st.markdown("**Double click a node to copy its name!**")
-
         st.components.v1.html(html_data, height=graph_net_ins_outs_height)
 
 ############################################################
@@ -161,7 +144,42 @@ with st.form("Capture code snippets"):
             st.json(search_results)
 
 ############################################################
-# 9. Show the original SAS script
+# 9. Flow Chart Generation
+############################################################
+
+# with st.container(border=True):
+#     col1, col2 = st.columns(2)
+#     with col1:
+#         st.markdown(
+#             """
+#             ### Mermaid mardown
+#             **[Proof of concept | Experimental]**
+#
+#             This is one of the solutions to visualise SAS code in network manner.
+#             It attempts to visualise SAS code as inputs -> precessing code -> outputs
+#             Since python doesnt have a convenient way to visualise this, I use Mermaid markdown and its visuasation tool.
+#
+#             So click "Copy Flow Chart and paste it into Mermaid tool  at: https://www.mermaidchart.com/play#
+#
+#             """
+#         )
+#     with col2:
+#         if st.button("Get Flow Chart"):
+#             # Generate flow chart only if we have a struct_SAS
+#             if st.session_state['struct_SAS']:
+#                 flow_chart = generate_mermaid_markdown(st.session_state['struct_SAS'].struct_code)
+#                 st.session_state['flow_chart'] = flow_chart
+#                 # st.session_state['show_flow_chart'] = True
+#
+#         # If flow chart is generated, show copy button
+#         # with col_copy:
+#         if st.session_state['flow_chart']:
+#             if st.button('Copy to clipboard'):
+#                 pyperclip.copy(st.session_state['flow_chart'])
+#                 st.success('Text copied successfully!\nPaste it here: https://www.mermaidchart.com/play#')
+
+############################################################
+# 10. Show the original SAS script
 ############################################################
 if st.session_state['sas_script']:
     st.subheader("Original SAS Script")
