@@ -225,24 +225,7 @@ class StructuredSAS:
 
         self.struct_code=cleaned_results
         return self
-    def execute_all_processing_steps(self):
-        return self.clean_initial_code()\
-            .parse_sas_script().merge_identity_runs()\
-            .assign_subgraph_ids()\
-            .clean_run_code()\
-            .get_metadata()\
-            .get_metadata_network()
 
-    def save_results(self):
-        # Save parsed results as JSON
-
-        output_json_path = "../data/parsed_sas_results.json"
-
-        with open(output_json_path, "w", encoding="utf-8") as json_file:
-            json.dump(self.struct_code, json_file, indent=4)
-
-        print(f"Parsed results saved to {output_json_path}")
-        print("Head of saved file:")
 
 
     def get_metadata(self):
@@ -267,7 +250,7 @@ class StructuredSAS:
 
         self.inputs = get_selected_metadata(self.struct_code, 'inputs')
         self.outputs = get_selected_metadata(self.struct_code, 'outputs')
-        self.subgraphs = get_selected_metadata(self.struct_code, 'sub_graph_id')
+        # self.subgraphs = get_selected_metadata(self.struct_code, 'sub_graph_id')
 
         return self
 
@@ -319,6 +302,27 @@ class StructuredSAS:
         self.edges = get_edges()
 
         return self
+
+    def execute_all_processing_steps(self):
+        return self.clean_initial_code()\
+            .parse_sas_script().merge_identity_runs()\
+            .assign_subgraph_ids()\
+            .clean_run_code()\
+            .get_metadata()\
+            .get_metadata_network()
+
+    def save_results(self):
+        # Save parsed results as JSON
+
+        output_json_path = "../data/parsed_sas_results.json"
+
+        with open(output_json_path, "w", encoding="utf-8") as json_file:
+            json.dump(self.struct_code, json_file, indent=4)
+
+        print(f"Parsed results saved to {output_json_path}")
+        print("Head of saved file:")
+
+
 
 
 if __name__ == '__main__':

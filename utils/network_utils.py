@@ -1,22 +1,27 @@
 import networkx as nx
 from pyvis.network import Network
-def create_net_html_ins_outs(nodes, edges):
+import regex as re
+
+def create_net_html_ins_outs(nodes, edges, physics, height):
     # Create a NetworkX graph from the provided lists
-    G = nx.Graph()
+    G = nx.DiGraph()
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
 
     # Create a PyVis network
     net = Network(
-        height="600px",
+        height=f"{str(height)}px",
         width="100%",
         bgcolor="#222222",
         font_color="white",
+        directed=True
         # select_menu=True
     )
 
     # Populate the PyVis network with the NetworkX graph
     net.from_nx(G)
+    net.toggle_physics(physics)
+    net.repulsion()
     html_data=net.generate_html()
 
     custom_script = """
@@ -62,7 +67,9 @@ def create_net_html_ins_outs(nodes, edges):
     })();
     </script>
             """
-    modified_html = html_data.replace("</body>", f"{custom_script}\n</body>")
 
+
+
+    modified_html = html_data.replace("</body>", f"{custom_script}\n</body>")
 
     return modified_html
