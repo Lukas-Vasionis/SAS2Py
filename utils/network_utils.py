@@ -12,6 +12,7 @@ def create_pyvis_force_layout(nodes, edges):
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
 
+
     # Force-directed layout in NetworkX
     pos = nx.spring_layout(G, seed=42)  # 'pos' = {node: (x, y), ...}
 
