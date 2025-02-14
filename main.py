@@ -109,7 +109,7 @@ with st.container(border=True):
             }
             net = create_pyvis_multipartite_layout(nodes, edges, layer_map)
         # html_data = net.generate_html()
-        html_data = inject_js_for_node_cp(net)
+        html_data = inject_js_features(net)
         st.markdown("**Double click a node to copy its name!**")
         st.components.v1.html(html_data, height=graph_net_ins_outs_height)
 

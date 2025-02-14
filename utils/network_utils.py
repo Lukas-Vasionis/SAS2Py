@@ -22,8 +22,8 @@ def create_pyvis_force_layout(nodes, edges):
         bgcolor="#222222",
         font_color="white",
         directed=True,
-        # filter_menu=True
-
+        select_menu=True,
+        cdn_resources='remote'
     )
 
     for node in G.nodes():
@@ -95,7 +95,8 @@ def create_pyvis_hierarchical_layout(nodes, edges):
         bgcolor="#222222",
         font_color="white",
         directed=True,
-        # filter_menu=True
+        select_menu=True,
+        cdn_resources='remote'
 
     )
 
@@ -136,7 +137,8 @@ def create_pyvis_multipartite_layout(nodes, edges, layer_map):
         bgcolor="#222222",
         font_color="white",
         directed=True,
-        # filter_menu=True
+        select_menu=True,
+        cdn_resources='remote'
     )
 
     for node in G.nodes():
@@ -155,7 +157,7 @@ def create_pyvis_multipartite_layout(nodes, edges, layer_map):
 
     return net
 
-def inject_js_for_node_cp(net):
+def inject_js_features(net):
     """
     Injects js script to add this feature: copy node name upon double click
     :param net: NetworkX net object
