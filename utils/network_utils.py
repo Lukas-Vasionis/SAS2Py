@@ -1,151 +1,198 @@
-from pyvis.network import Network
-import regex as re
+import streamlit as st
 import networkx as nx
-from graphviz import Digraph
+from pyvis.network import Network
+from collections import defaultdict, deque
 
-def create_net_html_ins_outs(nodes, edges, physics, height, layout='repulsion'):
-    # Create a NetworkX graph from the provided lists
+def create_pyvis_force_layout(nodes, edges):
+    """
+    A force-directed layout using NetworkX's spring_layout
+    (similar in spirit to Graphviz 'neato').
+    """
     G = nx.DiGraph()
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
 
-    # Create a PyVis network
+    # Force-directed layout in NetworkX
+    pos = nx.spring_layout(G, seed=42)  # 'pos' = {node: (x, y), ...}
+
     net = Network(
-        height=f"{str(height)}px",
         width="100%",
+        height="600px",
         bgcolor="#222222",
         font_color="white",
-        directed=True
-        # select_menu=True
+        directed=True,
     )
 
-    # Populate the PyVis network with the NetworkX graph
-    net.from_nx(G)
-    net.toggle_physics(physics)
+    for node in G.nodes():
+        x, y = pos[node]
+        # Scale and flip Y (optional) so the graph isn't too small or upside-down
+        net.add_node(
+            str(node),
+            x=float(x)*500,
+            y=float(-y)*500,
+            label=str(node),
+            physics=False
+        )
 
-    if layout in ['barnes_hut',"repulsion","force_atlas_2based","hierarchical_repulsion"]:
-        # Conditionally apply different layout algorithms or hierarchical settings
-        if layout == "repulsion":
-            net.repulsion(
-                node_distance=200,
-                central_gravity=0.2,
-                spring_length=200,
-                spring_strength=0.05,
-                damping=0.09
-            )
-        elif layout == "barnes_hut":
-            net.barnes_hut(
-                central_gravity=0.3,
-                spring_length=95,
-                spring_strength=0.1,
-                damping=0.09,
-                overlap=0
-            )
-        elif layout == "force_atlas":
-            net.force_atlas_2based(
-                gravitation=0.2,
-                central_gravity=0.01,
-                spring_length=100,
-                spring_strength=0.08,
-                damping=0.4
-            )
-        elif layout == "hierarchical":
-            net.set_options("""
-               var options = {
-                 layout: {
-                   hierarchical: {
-                     enabled: true,
-                     levelSeparation: 150,
-                     nodeSpacing: 100,
-                     treeSpacing: 200,
-                     blockShifting: true,
-                     edgeMinimization: true,
-                     parentCentralization: true,
-                     direction: 'UD',
-                     sortMethod: 'hubsize',
-                     shakeTowards: 'leaves'
-                   }
-                 }
-               }
-               """)
+    for u, v in G.edges():
+        net.add_edge(str(u), str(v))
 
-    # Generate the HTML for the PyVis network
-    html_data = net.generate_html()
-
-    # Adds feature: copy node name upon double-clicking on it
-    custom_script = """
-    <script>
-    (function() {
-        // Wait until the Vis network is fully initialized
-        // "network" is the variable PyVis uses to reference the Vis.js Network.
-        // We'll attach an event listener for 'doubleClick'
-        network.on("doubleClick", function(params) {
-            if (params.nodes.length > 0) {
-                // 'params.nodes[0]' is the ID of the clicked node
-                var nodeId = params.nodes[0];
-
-                // Retrieve the node's label from the network data
-                var nodeLabel = network.body.data.nodes.get(nodeId).label;
-
-                // Copy to clipboard
-                copyTextToClipboard(nodeLabel);
-
-                // Show an alert (optional)
-                // alert("Copied node label: " + nodeLabel);
-            }
-        });
-
-        function copyTextToClipboard(text) {
-            if (navigator.clipboard && window.isSecureContext) {
-                // modern approach with Clipboard API
-                return navigator.clipboard.writeText(text);
-            } else {
-                // fallback to the 'execCommand()' solution
-                let textArea = document.createElement("textarea");
-                textArea.value = text;
-                // make the textarea out of viewport
-                textArea.style.position = "fixed";
-                textArea.style.left = "-999999px";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                document.execCommand("copy");
-                document.body.removeChild(textArea);
-            }
-        }
-    })();
-    </script>
-            """
-    modified_html = html_data.replace("</body>", f"{custom_script}\n</body>")
-
-    return modified_html
+    return net
 
 
-def create_graphviz_graph_ins_outs(nodes, edges, physics=True, height=1000):
+def create_pyvis_hierarchical_layout(nodes, edges):
     """
-    Create a graphviz Digraph from lists of nodes and edges.
-
-    :param nodes: A list of node identifiers (strings, numbers, etc.).
-    :param edges: A list of edges, where each edge is a tuple (source, target).
-    :param physics: (Unused in Graphviz) included for signature compatibility.
-    :param height: (Unused in Graphviz) included for signature compatibility.
-    :return: A graphviz.Digraph object.
+    A BFS-based hierarchical layout (top -> down).
+    This is somewhat similar to Graphviz 'dot' for DAGs.
     """
-    # Create a NetworkX graph from the provided lists (for convenience)
     G = nx.DiGraph()
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
 
-    # Initialize a directed Graphviz graph
-    dot = Digraph()
-    dot.attr('graph', size=f"0,{height}!")
+    # --- 1) Find BFS layers (assuming acyclic graph) ---
+    in_degree_zero = [n for n in G.nodes() if G.in_degree(n) == 0]
+    queue = deque(in_degree_zero)
+    layer = 0
+    node_levels = {}  # node -> integer level
 
-    # Add nodes to the Graphviz object
-    for node in G.nodes():
-        dot.node(str(node))
+    while queue:
+        layer_size = len(queue)
+        for _ in range(layer_size):
+            node = queue.popleft()
+            # Assign layer if not assigned
+            if node not in node_levels:
+                node_levels[node] = layer
+            # Enqueue children
+            for child in G.successors(node):
+                if child not in node_levels:
+                    queue.append(child)
+        layer += 1
 
-    # Add edges to the Graphviz object
+    # Group nodes by assigned layer
+    level_dict = defaultdict(list)
+    for n, lvl in node_levels.items():
+        level_dict[lvl].append(n)
+
+    # --- 2) Map each node to (x, y) ---
+    pos = {}
+    y_gap = 200.0
+    x_gap = 150.0
+
+    for lvl, nodes_in_level in level_dict.items():
+        for i, n in enumerate(nodes_in_level):
+            x = i * x_gap
+            # Negative Y so it goes top -> bottom
+            y = -lvl * y_gap
+            pos[n] = (x, y)
+
+    # --- 3) Create the PyVis Network (no physics) and add nodes/edges ---
+    net = Network(
+        width="100%",
+        height="600px",
+        bgcolor="#222222",
+        font_color="white",
+        directed=True,
+
+    )
+
+    for n in G.nodes():
+        x, y = pos[n]
+        net.add_node(
+            str(n),
+            x=float(x),
+            y=float(y),
+            label=str(n),
+        )
+
     for u, v in G.edges():
-        dot.edge(str(u), str(v))
+        net.add_edge(str(u), str(v))
 
-    return dot
+    return net
+
+
+def create_pyvis_multipartite_layout(nodes, edges, layer_map):
+    """
+    Uses NetworkX's multipartite_layout which arranges nodes by 'subset' (layer).
+    Similar to a layered approach. Provide each node's layer in 'layer_map'.
+    """
+    G = nx.DiGraph()
+    G.add_nodes_from(nodes)
+    G.add_edges_from(edges)
+
+    # Attach the 'subset' attribute for multipartite_layout
+    for n in G.nodes():
+        G.nodes[n]['subset'] = layer_map.get(n, 0)
+
+    # Layout: horizontal or vertical. (align='horizontal' by default => layers stacked vertically)
+    pos = nx.multipartite_layout(G, subset_key="subset")
+
+    net = Network(
+        width="100%",
+        height="600px",
+        bgcolor="#222222",
+        font_color="white",
+        directed=True,
+    )
+
+    for node in G.nodes():
+        x, y = pos[node]
+        # Scale and flip Y
+        net.add_node(
+            str(node),
+            x=float(x)*300,
+            y=float(-y)*300,
+            label=str(node),
+            physics=False
+        )
+
+    for u, v in G.edges():
+        net.add_edge(str(u), str(v))
+
+    return net
+
+
+def main():
+    st.title("PyVis Layout Examples (Without PyGraphviz)")
+
+    st.write("""
+    This demo shows three layout strategies:
+    1. Force-directed (NetworkX's `spring_layout`)
+    2. BFS-based hierarchical
+    3. Multipartite layout
+    """)
+
+    # Sample data
+    nodes = ["A", "B", "C", "D", "E", "F"]
+    edges = [("A","B"), ("A","C"), ("B","D"), ("C","E"), ("D","F"), ("E","F")]
+
+
+    layout_choice = st.selectbox(
+        "Choose a layout:",
+        ["Force-directed (spring_layout)", "BFS hierarchical", "Multipartite"]
+    )
+
+    if layout_choice == "Force-directed (spring_layout)":
+        net = create_pyvis_force_layout(nodes, edges)
+    elif layout_choice == "BFS hierarchical":
+        net = create_pyvis_hierarchical_layout(nodes, edges)
+    else:  # "Multipartite"
+        # For multipartite layout, define which layer each node belongs to
+        layer_map = {
+            "A": 0,
+            "B": 1,
+            "C": 1,
+            "D": 2,
+            "E": 2,
+            "F": 3
+        }
+        net = create_pyvis_multipartite_layout(nodes, edges, layer_map)
+
+    # Generate HTML from PyVis
+    html_str = net.generate_html()
+
+    # Display in Streamlit via st.components.v1.html
+    st.components.v1.html(html_str, height=650, scrolling=True)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,10 @@
 # Issues 
 
-- Accept import of txt only
-- Need directed network graphs
-- Need to clean inputs/outputs: turn db.X to X if X among self.inputs 
+- Clean request.txt libraries
+- Remove cycles from I/O graph
+- Review and fix session states
+- Add node selection buttons to pyvis
+- Bring back the double-click:copy node name
+- ~~Accept import of txt only~~
+- ~~Need directed network graphs~~
+- ~~Need to clean inputs/outputs: turn db.X to X if X among self.inputs~~

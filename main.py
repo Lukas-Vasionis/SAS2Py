@@ -1,7 +1,6 @@
 import streamlit as st
 from utils.parse_utils import StructuredSAS
-from utils.network_utils import create_net_html_ins_outs,create_graphviz_graph_ins_outs
-from utils.devs import *
+from utils.network_utils import *
 
 ############################################################
 # 1. Set page configuration
