@@ -22,6 +22,8 @@ def create_pyvis_force_layout(nodes, edges):
         bgcolor="#222222",
         font_color="white",
         directed=True,
+        # filter_menu=True
+
     )
 
     for node in G.nodes():
@@ -93,6 +95,7 @@ def create_pyvis_hierarchical_layout(nodes, edges):
         bgcolor="#222222",
         font_color="white",
         directed=True,
+        # filter_menu=True
 
     )
 
@@ -133,6 +136,7 @@ def create_pyvis_multipartite_layout(nodes, edges, layer_map):
         bgcolor="#222222",
         font_color="white",
         directed=True,
+        # filter_menu=True
     )
 
     for node in G.nodes():
@@ -151,6 +155,61 @@ def create_pyvis_multipartite_layout(nodes, edges, layer_map):
 
     return net
 
+def inject_js_for_node_cp(net):
+    """
+    Injects js script to add this feature: copy node name upon double click
+    :param net: NetworkX net object
+    :return: str, html of pyvis graph
+    """
+
+    # Generate the HTML for the PyVis network
+    html_data = net.generate_html()
+
+    # Adds feature: copy node name upon double-clicking on it
+    custom_script = """
+    <script>
+    (function() {
+        // Wait until the Vis network is fully initialized
+        // "network" is the variable PyVis uses to reference the Vis.js Network.
+        // We'll attach an event listener for 'doubleClick'
+        network.on("doubleClick", function(params) {
+            if (params.nodes.length > 0) {
+                // 'params.nodes[0]' is the ID of the clicked node
+                var nodeId = params.nodes[0];
+
+                // Retrieve the node's label from the network data
+                var nodeLabel = network.body.data.nodes.get(nodeId).label;
+
+                // Copy to clipboard
+                copyTextToClipboard(nodeLabel);
+
+                // Show an alert (optional)
+                // alert("Copied node label: " + nodeLabel);
+            }
+        });
+
+        function copyTextToClipboard(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                // modern approach with Clipboard API
+                return navigator.clipboard.writeText(text);
+            } else {
+                // fallback to the 'execCommand()' solution
+                let textArea = document.createElement("textarea");
+                textArea.value = text;
+                // make the textarea out of viewport
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand("copy");
+                document.body.removeChild(textArea);
+            }
+        }
+    })();
+    </script>
+            """
+    return html_data.replace("</body>", f"{custom_script}\n</body>")
 
 def main():
     st.title("PyVis Layout Examples (Without PyGraphviz)")
@@ -193,6 +252,7 @@ def main():
 
     # Display in Streamlit via st.components.v1.html
     st.components.v1.html(html_str, height=650, scrolling=True)
+
 
 
 if __name__ == "__main__":
