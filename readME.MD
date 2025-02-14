@@ -7,8 +7,10 @@ You can load it loacaly by following these instructions:
 - Run `streamlit run 'main.py'` in terminal
   - If terminal asks to add email, type any random email
   - Click one of the local urls returned in the terminal. Should look like this:
-    ~~~Local URL: http://localhost.... 
-    Network URL: http://192.168...~~~
+  ~~~
+  local URL: http://localhost....
+  Network URL: http://192.168...
+  ~~~
 
 To do:
 - Remove cycles from I/O graph
